@@ -53,8 +53,8 @@
 #include <uORB/topics/battery_status.h>
 #include <uORB/topics/esc_status.h>
 
-#include <systemlib/mixer/mixer.h>
-#include <systemlib/battery.h>
+#include <lib/mixer/mixer.h>
+#include <battery/battery.h>
 
 #include <bebop_bus/BebopBus.hpp>
 #include <DevMgr.hpp>
@@ -377,9 +377,7 @@ void task_main(int argc, char *argv[])
 
 			if (_mixers != nullptr) {
 				/* do mixing */
-				_outputs.noutputs = _mixers->mix(_outputs.output,
-								 4,
-								 NULL);
+				_outputs.noutputs = _mixers->mix(_outputs.output, 4);
 			}
 
 			// Set last throttle for battery calculations
@@ -434,14 +432,16 @@ void task_main(int argc, char *argv[])
 			orb_copy(ORB_ID(actuator_armed), _armed_sub, &_armed);
 		}
 
+		const bool lockdown = _armed.manual_lockdown || _armed.lockdown || _armed.force_failsafe;
+
 		// Start the motors if armed but not alreay running
-		if (_armed.armed && !_motors_running) {
+		if (_armed.armed && !lockdown && !_motors_running) {
 			g_dev->start_motors();
 			_motors_running = true;
 		}
 
-		// Stop motors if not armed but running
-		if (!_armed.armed && _motors_running) {
+		// Stop motors if not armed or killed, but running
+		if ((!_armed.armed || lockdown) && _motors_running) {
 			g_dev->stop_motors();
 			_motors_running = false;
 		}

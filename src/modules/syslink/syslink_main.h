@@ -31,9 +31,11 @@
  *
  ****************************************************************************/
 
+#pragma once
+
 #include <stdint.h>
 
-#include <systemlib/battery.h>
+#include <battery/battery.h>
 
 #include <drivers/device/device.h>
 #include <drivers/device/ringbuffer.h>
@@ -125,7 +127,7 @@ private:
 	int _params_sub;
 
 	// Current parameter values
-	uint32_t _channel, _rate;
+	int32_t _channel, _rate;
 	uint64_t _addr;
 	hrt_abstime _params_update[3]; // Time at which the parameters were updated
 	hrt_abstime _params_ack[3]; // Time at which the parameters were acknowledged by the nrf module
@@ -152,12 +154,12 @@ private:
 };
 
 
-class SyslinkBridge : public device::CDev
+class SyslinkBridge : public cdev::CDev
 {
 
 public:
 	SyslinkBridge(Syslink *link);
-	virtual ~SyslinkBridge();
+	virtual ~SyslinkBridge() = default;
 
 	virtual int	init();
 
@@ -179,16 +181,18 @@ private:
 	// Stores data that was received from syslink but not yet read by another driver
 	ringbuffer::RingBuffer _readbuffer;
 
+	crtp_message_t _msg_to_send;
+	int _msg_to_send_size_remaining;
 
 };
 
 
-class SyslinkMemory : public device::CDev
+class SyslinkMemory : public cdev::CDev
 {
 
 public:
 	SyslinkMemory(Syslink *link);
-	virtual ~SyslinkMemory();
+	virtual ~SyslinkMemory() = default;
 
 	virtual int	init();
 

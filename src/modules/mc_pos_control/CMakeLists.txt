@@ -37,7 +37,12 @@ px4_add_module(
 	STACK_MAIN 1200
 	SRCS
 		mc_pos_control_main.cpp
+		PositionControl.cpp
+		Utility/ControlMath.cpp
 	DEPENDS
-		platforms__common
+		controllib
+		FlightTasks
+		git_ecl
+		ecl_geo
+		WeatherVane
 	)
-# vim: set noet ft=cmake fenc=utf-8 ff=unix :

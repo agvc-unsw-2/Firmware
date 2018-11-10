@@ -46,10 +46,6 @@
 namespace land_detector
 {
 
-RoverLandDetector::RoverLandDetector()
-{
-}
-
 void RoverLandDetector::_initialize_topics()
 {
 }
@@ -64,7 +60,7 @@ void RoverLandDetector::_update_params()
 
 bool RoverLandDetector::_get_ground_contact_state()
 {
-	return false;
+	return true;
 }
 
 bool RoverLandDetector::_get_maybe_landed_state()
@@ -75,6 +71,10 @@ bool RoverLandDetector::_get_maybe_landed_state()
 
 bool RoverLandDetector::_get_landed_state()
 {
+	if (!_arming.armed) {
+		return true;
+	}
+
 	return false;
 }
 
@@ -88,4 +88,4 @@ float RoverLandDetector::_get_max_altitude()
 	return 0.0f;
 }
 
-}
+} // namespace land_detector

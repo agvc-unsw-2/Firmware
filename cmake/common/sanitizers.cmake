@@ -31,64 +31,109 @@
 #
 ############################################################################
 
-option(SANITIZE_ADDRESS "Enable AddressSanitizer" Off)
-option(SANITIZE_MEMORY "Enable MemorySanitizer" Off)
-option(SANITIZE_THREAD "Enable ThreadSanitizer" Off)
-option(SANITIZE_UNDEFINED "Enable UndefinedBehaviorSanitizer" Off)
+if (CMAKE_BUILD_TYPE STREQUAL AddressSanitizer)
+	message(STATUS "AddressSanitizer enabled")
 
-if (SANITIZE_ADDRESS)
-        message(STATUS "address sanitizer enabled")
+	# environment variables
+	#  ASAN_OPTIONS=check_initialization_order=1,detect_stack_use_after_return=1
+	add_compile_options(
+		-O1
+		-g3
 
-        # environment variables
-        #  ASAN_OPTIONS=detect_stack_use_after_return=1
-        #  ASAN_OPTIONS=check_initialization_order=1
-        add_compile_options(
-                -g3
-                -fno-omit-frame-pointer
-                -fsanitize=address
-                #-fsanitize-address-use-after-scope
-        )
+		-fsanitize=address
 
-elseif(SANITIZE_MEMORY)
-        message(STATUS "thread sanitizer enabled")
+		-fno-omit-frame-pointer # Leave frame pointers. Allows the fast unwinder to function properly.
+		-fno-common # Do not treat global variable in C as common variables (allows ASan to instrument them)
+		-fno-optimize-sibling-calls # disable inlining and and tail call elimination for perfect stack traces
+	)
 
-        add_compile_options(
-                -g3
-                -fsanitize=memory
-        )
+	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address" CACHE INTERNAL "" FORCE)
+	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fsanitize=address" CACHE INTERNAL "" FORCE)
+	set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -fsanitize=address" CACHE INTERNAL "" FORCE)
 
-elseif(SANITIZE_THREAD)
-        message(STATUS "thread sanitizer enabled")
+	function(sanitizer_fail_test_on_error test_name)
+		set_tests_properties(${test_name} PROPERTIES FAIL_REGULAR_EXPRESSION "ERROR: AddressSanitizer")
+		set_tests_properties(${test_name} PROPERTIES FAIL_REGULAR_EXPRESSION "ERROR: LeakSanitizer")
+	endfunction(sanitizer_fail_test_on_error)
 
-        add_compile_options(
-                -g3
-                -fsanitize=thread
-        )
+elseif (CMAKE_BUILD_TYPE STREQUAL MemorySanitizer)
+	if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+		message(WARNING "MemorySanitizer might not be available with gcc")
+	else()
+		message(STATUS "MemorySanitizer enabled")
+	endif()
 
-elseif(SANITIZE_UNDEFINED)
-        message(STATUS "undefined behaviour sanitizer enabled")
+	add_compile_options(
+		-O1
+		-g3
 
-        add_compile_options(
-                -g3
-                #-fsanitize=alignment
-                -fsanitize=bool
-                -fsanitize=bounds
-                -fsanitize=enum
-                #-fsanitize=float-cast-overflow
-                -fsanitize=float-divide-by-zero
-                #-fsanitize=function
-                -fsanitize=integer-divide-by-zero
-                -fsanitize=nonnull-attribute
-                -fsanitize=null
-                -fsanitize=object-size
-                -fsanitize=return
-                -fsanitize=returns-nonnull-attribute
-                -fsanitize=shift
-                -fsanitize=signed-integer-overflow
-                -fsanitize=unreachable
-                #-fsanitize=unsigned-integer-overflow
-                -fsanitize=vla-bound
-                -fsanitize=vptr
-        )
+		-fsanitize=memory
+		-fsanitize-memory-track-origins
+
+		-fno-omit-frame-pointer # Leave frame pointers. Allows the fast unwinder to function properly.
+		-fno-common # Do not treat global variable in C as common variables (allows ASan to instrument them)
+		-fno-optimize-sibling-calls # disable inlining and and tail call elimination for perfect stack traces
+	)
+
+	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=memory" CACHE INTERNAL "" FORCE)
+	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fsanitize=memory" CACHE INTERNAL "" FORCE)
+	set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -fsanitize=memory" CACHE INTERNAL "" FORCE)
+
+	function(sanitizer_fail_test_on_error test_name)
+		set_tests_properties(${test_name} PROPERTIES FAIL_REGULAR_EXPRESSION "WARNING: MemorySanitizer")
+	endfunction(sanitizer_fail_test_on_error)
+
+elseif (CMAKE_BUILD_TYPE STREQUAL ThreadSanitizer)
+	message(STATUS "ThreadSanitizer enabled")
+
+	add_compile_options(
+		-g3
+		-fsanitize=thread
+	)
+
+	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=thread" CACHE INTERNAL "" FORCE)
+	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fsanitize=thread" CACHE INTERNAL "" FORCE)
+	set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -fsanitize=thread" CACHE INTERNAL "" FORCE)
+
+	function(sanitizer_fail_test_on_error test_name)
+		set_tests_properties(${test_name} PROPERTIES FAIL_REGULAR_EXPRESSION "WARNING: ThreadSanitizer")
+	endfunction(sanitizer_fail_test_on_error)
+
+elseif (CMAKE_BUILD_TYPE STREQUAL UndefinedBehaviorSanitizer)
+	message(STATUS "UndefinedBehaviorSanitizer enabled")
+
+	add_compile_options(
+		-g3
+		-fsanitize=alignment
+		-fsanitize=bool
+		-fsanitize=bounds
+		-fsanitize=enum
+		-fsanitize=float-cast-overflow
+		-fsanitize=float-divide-by-zero
+		-fsanitize=integer-divide-by-zero
+		-fsanitize=nonnull-attribute
+		-fsanitize=null
+		-fsanitize=object-size
+		-fsanitize=return
+		-fsanitize=returns-nonnull-attribute
+		-fsanitize=shift
+		-fsanitize=signed-integer-overflow
+		-fsanitize=unreachable
+		-fsanitize=vla-bound
+		-fno-sanitize-recover=bounds,null
+	)
+
+	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=undefined" CACHE INTERNAL "" FORCE)
+	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fsanitize=undefined" CACHE INTERNAL "" FORCE)
+	set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -fsanitize=undefined" CACHE INTERNAL "" FORCE)
+
+	function(sanitizer_fail_test_on_error test_name)
+		set_tests_properties(${test_name} PROPERTIES FAIL_REGULAR_EXPRESSION "runtime error:")
+	endfunction(sanitizer_fail_test_on_error)
+else()
+
+	function(sanitizer_fail_test_on_error test_name)
+		# default: don't do anything
+	endfunction(sanitizer_fail_test_on_error)
 
 endif()
