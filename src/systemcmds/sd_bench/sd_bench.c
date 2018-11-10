@@ -64,7 +64,7 @@ static inline unsigned int time_fsync(int fd);
 
 __EXPORT int	sd_bench_main(int argc, char *argv[]);
 
-static const char *BENCHMARK_FILE = PX4_ROOTFSDIR"/fs/microsd/benchmark.tmp";
+static const char *BENCHMARK_FILE = PX4_STORAGEDIR"/benchmark.tmp";
 
 static int num_runs; ///< number of runs
 static int run_duration; ///< duration of a single run [ms]
@@ -118,15 +118,15 @@ sd_bench_main(int argc, char *argv[])
 		}
 	}
 
+	if (block_size <= 0 || num_runs <= 0) {
+		PX4_ERR("invalid argument");
+		return -1;
+	}
+
 	int bench_fd = open(BENCHMARK_FILE, O_CREAT | O_WRONLY | O_TRUNC, PX4_O_MODE_666);
 
 	if (bench_fd < 0) {
 		PX4_ERR("Can't open benchmark file %s", BENCHMARK_FILE);
-		return -1;
-	}
-
-	if (block_size <= 0 || num_runs <= 0) {
-		PX4_ERR("invalid argument");
 		return -1;
 	}
 
@@ -135,6 +135,7 @@ sd_bench_main(int argc, char *argv[])
 
 	if (!block) {
 		PX4_ERR("Failed to allocate memory block");
+		close(bench_fd);
 		return -1;
 	}
 
@@ -172,7 +173,7 @@ void write_test(int fd, uint8_t *block, int block_size)
 		unsigned int max_write_time = 0;
 		unsigned int fsync_time = 0;
 
-		while (hrt_elapsed_time(&start) < run_duration * 1000) {
+		while ((int64_t)hrt_elapsed_time(&start) < run_duration * 1000) {
 
 			hrt_abstime write_start = hrt_absolute_time();
 			size_t written = write(fd, block, block_size);

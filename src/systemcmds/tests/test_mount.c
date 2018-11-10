@@ -48,8 +48,7 @@
 #include <stdio.h>
 #include <stddef.h>
 #include <systemlib/err.h>
-#include <systemlib/systemlib.h>
-#include <systemlib/perf_counter.h>
+#include <perf/perf_counter.h>
 #include <string.h>
 
 #include <drivers/drv_hrt.h>
@@ -71,7 +70,7 @@ test_mount(int argc, char *argv[])
 	/* check if microSD card is mounted */
 	struct stat buffer;
 
-	if (stat(PX4_ROOTFSDIR "/fs/microsd/", &buffer)) {
+	if (stat(PX4_STORAGEDIR "/", &buffer)) {
 		PX4_ERR("no microSD card mounted, aborting file test");
 		return 1;
 	}
@@ -79,7 +78,7 @@ test_mount(int argc, char *argv[])
 	/* list directory */
 	DIR		*d;
 	struct dirent	*dir;
-	d = opendir(PX4_ROOTFSDIR "/fs/microsd");
+	d = opendir(PX4_STORAGEDIR);
 
 	if (d) {
 
@@ -158,6 +157,7 @@ test_mount(int argc, char *argv[])
 		}
 
 		if (it_left_abort == 0) {
+			close(cmd_fd);
 			(void)unlink(cmd_filename);
 			return 0;
 		}
@@ -202,7 +202,7 @@ test_mount(int argc, char *argv[])
 
 			uint8_t read_buf[chunk_sizes[c] + alignments] __attribute__((aligned(64)));
 
-			int fd = px4_open(PX4_ROOTFSDIR "/fs/microsd/testfile", O_TRUNC | O_WRONLY | O_CREAT);
+			int fd = px4_open(PX4_STORAGEDIR "/testfile", O_TRUNC | O_WRONLY | O_CREAT);
 
 			for (unsigned i = 0; i < iterations; i++) {
 
@@ -239,7 +239,7 @@ test_mount(int argc, char *argv[])
 			usleep(200000);
 
 			px4_close(fd);
-			fd = px4_open(PX4_ROOTFSDIR "/fs/microsd/testfile", O_RDONLY);
+			fd = px4_open(PX4_STORAGEDIR "/testfile", O_RDONLY);
 
 			/* read back data for validation */
 			for (unsigned i = 0; i < iterations; i++) {
@@ -268,11 +268,11 @@ test_mount(int argc, char *argv[])
 
 			}
 
-			int ret = unlink(PX4_ROOTFSDIR "/fs/microsd/testfile");
+			int ret = unlink(PX4_STORAGEDIR "/testfile");
 			px4_close(fd);
 
 			if (ret) {
-				px4_close(cmd_fd);
+				close(cmd_fd);
 				PX4_ERR("UNLINKING FILE FAILED");
 				return 1;
 			}
@@ -284,7 +284,7 @@ test_mount(int argc, char *argv[])
 	fsync(fileno(stderr));
 	usleep(20000);
 
-	px4_close(cmd_fd);
+	close(cmd_fd);
 
 	/* we always reboot for the next test if we get here */
 	PX4_INFO("Iteration done, rebooting..");

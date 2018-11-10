@@ -39,13 +39,18 @@
 
 #pragma once
 
-#define BOARD_OVERRIDE_UUID "OCPOC       " // must be of length 12 (PX4_CPU_UUID_BYTE_LENGTH)
-#define BOARD_OVERRIDE_MFGUID BOARD_OVERRIDE_UUID
+#define BOARD_OVERRIDE_UUID "OCPOC00000000000" // must be of length 16
+#define PX4_SOC_ARCH_ID     PX4_SOC_ARCH_ID_OCPOC
 
 #define BOARD_NAME "OCPOC"
 #define BOARD_BATTERY1_V_DIV   (10.177939394f)
 #define BOARD_HAS_NO_RESET
 #define BOARD_HAS_NO_BOOTLOADER
+
+#define BOARD_NUMBER_I2C_BUSES 4
+#define BOARD_MAX_LEDS 1 // Number of external LED's this board has
+#define PX4_I2C_BUS_LED 1
+#define PX4_I2C_BUS_EXPANSION 1
 
 // Battery ADC channels
 #define ADC_BATTERY_VOLTAGE_CHANNEL     10
@@ -54,5 +59,3 @@
 
 #include <system_config.h>
 #include "../common/board_common.h"
-
-#define BOARD_MAX_LEDS 1 // Number external of LED's this board has

@@ -43,13 +43,11 @@
 #include <px4_time.h>
 #include "vcdevtest_example.h"
 #include <drivers/drv_device.h>
-#include <drivers/device/device.h>
+#include <lib/cdev/CDev.hpp>
 #include <unistd.h>
 #include <stdio.h>
 
 px4::AppState VCDevExample::appState;
-
-using namespace device;
 
 #define TESTDEV "/dev/vdevtest"
 
@@ -66,7 +64,7 @@ static int writer_main(int argc, char *argv[])
 		return -px4_errno;
 	}
 
-	int ret;
+	int ret = 0;
 	int i = 0;
 
 	while (!g_exit) {
@@ -94,32 +92,32 @@ class PrivData
 {
 public:
 	PrivData() : _read_offset(0) {}
-	~PrivData() {}
+	~PrivData() = default;
 
 	size_t _read_offset;
 };
 
-class VCDevNode : public VDev
+class VCDevNode : public cdev::CDev
 {
 public:
 	VCDevNode() :
-		VDev("vcdevtest", TESTDEV),
+		CDev(TESTDEV),
 		_is_open_for_write(false),
-		_write_offset(0) {};
+		_write_offset(0) {}
 
-	~VCDevNode() {}
+	~VCDevNode() = default;
 
-	virtual int open(device::file_t *handlep);
-	virtual int close(device::file_t *handlep);
-	virtual ssize_t write(device::file_t *handlep, const char *buffer, size_t buflen);
-	virtual ssize_t read(device::file_t *handlep, char *buffer, size_t buflen);
+	virtual int open(cdev::file_t *handlep);
+	virtual int close(cdev::file_t *handlep);
+	virtual ssize_t write(cdev::file_t *handlep, const char *buffer, size_t buflen);
+	virtual ssize_t read(cdev::file_t *handlep, char *buffer, size_t buflen);
 private:
 	bool _is_open_for_write;
 	size_t _write_offset;
 	char     _buf[1000];
 };
 
-int VCDevNode::open(device::file_t *handlep)
+int VCDevNode::open(cdev::file_t *handlep)
 {
 	// Only allow one writer
 	if (_is_open_for_write && (handlep->flags & PX4_F_WRONLY)) {
@@ -127,7 +125,7 @@ int VCDevNode::open(device::file_t *handlep)
 		return -1;
 	}
 
-	int ret = VDev::open(handlep);
+	int ret = CDev::open(handlep);
 
 	if (ret != 0) {
 		return ret;
@@ -142,11 +140,11 @@ int VCDevNode::open(device::file_t *handlep)
 	return 0;
 }
 
-int VCDevNode::close(device::file_t *handlep)
+int VCDevNode::close(cdev::file_t *handlep)
 {
 	delete (PrivData *)handlep->priv;
 	handlep->priv = nullptr;
-	VDev::close(handlep);
+	CDev::close(handlep);
 
 	// Enable a new writer of the device is re-opened for write
 	if ((handlep->flags & PX4_F_WRONLY) && _is_open_for_write) {
@@ -156,7 +154,7 @@ int VCDevNode::close(device::file_t *handlep)
 	return 0;
 }
 
-ssize_t VCDevNode::write(device::file_t *handlep, const char *buffer, size_t buflen)
+ssize_t VCDevNode::write(cdev::file_t *handlep, const char *buffer, size_t buflen)
 {
 	for (size_t i = 0; i < buflen && _write_offset < 1000; i++) {
 		_buf[_write_offset] = buffer[i];
@@ -169,7 +167,7 @@ ssize_t VCDevNode::write(device::file_t *handlep, const char *buffer, size_t buf
 	return buflen;
 }
 
-ssize_t VCDevNode::read(device::file_t *handlep, char *buffer, size_t buflen)
+ssize_t VCDevNode::read(cdev::file_t *handlep, char *buffer, size_t buflen)
 {
 	PrivData *p = (PrivData *)handlep->priv;
 	ssize_t chars_read = 0;
@@ -188,7 +186,7 @@ VCDevExample::~VCDevExample()
 {
 	if (_node) {
 		delete _node;
-		_node = 0;
+		_node = nullptr;
 	}
 }
 
@@ -272,7 +270,7 @@ int VCDevExample::main()
 
 	_node = new VCDevNode();
 
-	if (_node == 0) {
+	if (_node == nullptr) {
 		PX4_INFO("Failed to allocate VCDevNode");
 		return -ENOMEM;
 	}
@@ -289,17 +287,7 @@ int VCDevExample::main()
 		return -px4_errno;
 	}
 
-	void *p = 0;
-	int ret = px4_ioctl(fd, DIOC_GETPRIV, (unsigned long)&p);
-
-	if (ret < 0) {
-		PX4_INFO("ioctl DIOC_GETPRIV failed %d %d", ret, px4_errno);
-		return -px4_errno;
-	}
-
-	PX4_INFO("priv data = %p %s", p, p == (void *)_node ? "PASS" : "FAIL");
-
-	ret = test_pub_block(fd, 1);
+	int ret = test_pub_block(fd, 1);
 
 	if (ret < 0) {
 		return ret;
@@ -318,7 +306,7 @@ int VCDevExample::main()
 				 SCHED_PRIORITY_MAX - 6,
 				 2000,
 				 writer_main,
-				 (char *const *)NULL);
+				 (char *const *)nullptr);
 
 	ret = 0;
 
