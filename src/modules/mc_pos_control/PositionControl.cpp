@@ -52,14 +52,18 @@ using namespace matrix;
 
 PositionControl::PositionControl()
 {
-	_Pz_h   = param_find("MPC_Z_P");
-	_Pvz_h  = param_find("MPC_Z_VEL_P");
-	_Ivz_h  = param_find("MPC_Z_VEL_I");
-	_Dvz_h  = param_find("MPC_Z_VEL_D");
-	_Pxy_h  = param_find("MPC_XY_P");
-	_Pvxy_h = param_find("MPC_XY_VEL_P");
-	_Ivxy_h = param_find("MPC_XY_VEL_I");
-	_Dvxy_h = param_find("MPC_XY_VEL_D");
+	_Pz_h     = param_find("MPC_Z_P");
+	_Iz_h     = param_find("MPC_Z_I");
+	_IzMax_h  = param_find("MPC_Z_I_MAX");
+	_Pvz_h    = param_find("MPC_Z_VEL_P");
+	_Ivz_h    = param_find("MPC_Z_VEL_I");
+	_Dvz_h    = param_find("MPC_Z_VEL_D");
+	_Pxy_h    = param_find("MPC_XY_P");
+	_Ixy_h    = param_find("MPC_XY_I");
+	_IxyMax_h = param_find("MPC_XY_I_MAX");
+	_Pvxy_h   = param_find("MPC_XY_VEL_P");
+	_Ivxy_h   = param_find("MPC_XY_VEL_I");
+	_Dvxy_h   = param_find("MPC_XY_VEL_D");
 	_VelMaxXY_h = param_find("MPC_XY_VEL_MAX");
 	_VelMaxZdown_h = param_find("MPC_Z_VEL_MAX_DN");
 	_VelMaxZup_h = param_find("MPC_Z_VEL_MAX_UP");
@@ -171,9 +175,14 @@ void PositionControl::_interfaceMapping()
 void PositionControl::_positionController()
 {
 	/* Generate desired velocity setpoint */
+	Iterm = Iterm + (_pos_sp - _pos).emult(Ip);
+	for(int i = 0; i < 3; i++)
+	{
+		Iterm(i) = math::constrain(Iterm(i), -IpMax(i), IpMax(i));
+	}
 
 	/* P-controller */
-	_vel_sp = (_pos_sp - _pos).emult(Pp) + _vel_sp;
+	_vel_sp = _vel_sp + (_pos_sp - _pos).emult(Pp) + Iterm;
 
 	/* Make sure velocity setpoint is constrained in all directions (xyz). */
 	float vel_norm_xy = sqrtf(_vel_sp(0) * _vel_sp(0) + _vel_sp(1) * _vel_sp(1));
@@ -316,6 +325,14 @@ void PositionControl::_setParams()
 	param_get(_Pxy_h, &Pp(0));
 	param_get(_Pxy_h, &Pp(1));
 	param_get(_Pz_h, &Pp(2));
+
+	param_get(_Ixy_h, &Ip(0));
+	param_get(_Ixy_h, &Ip(1));
+	param_get(_Iz_h, &Ip(2));
+
+	param_get(_IxyMax_h, &IpMax(0));
+	param_get(_IxyMax_h, &IpMax(1));
+	param_get(_IzMax_h, &IpMax(2));
 
 	param_get(_Pvxy_h, &Pv(0));
 	param_get(_Pvxy_h, &Pv(1));
