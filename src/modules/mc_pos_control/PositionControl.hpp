@@ -45,6 +45,9 @@
 #include <uORB/topics/vehicle_local_position_setpoint.h>
 #include <parameters/param.h>
 
+#include <uORB/uORB.h>
+#include <uORB/topics/debug_key_value.h>
+
 #pragma once
 
 /* Constraints based on mode:
@@ -120,7 +123,6 @@ private:
 	/* Parameters */
 	matrix::Vector3f Pp, Ip, IpMax, Pv, Iv, Dv = matrix::Vector3f{0.0f, 0.0f, 0.0f};
 
-	matrix::Vector3f Iterm = matrix::Vector3f{0.0f, 0.0f, 0.0f};
 
 	float _VelMaxXY{};
 	struct DirectionD {
@@ -142,4 +144,9 @@ private:
 	void _velocityController(const float &dt);
 	void _updateParams();
 	void _setParams();
+
+	/* debug variables*/
+	struct debug_key_value_s dbg;
+	orb_advert_t pub_dbg;
+	int timer;
 };

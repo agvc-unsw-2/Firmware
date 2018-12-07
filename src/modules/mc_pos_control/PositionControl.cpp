@@ -45,10 +45,15 @@
 #include "PositionControl.hpp"
 #include <float.h>
 #include <mathlib/mathlib.h>
+
 #include "uORB/topics/parameter_update.h"
 #include "Utility/ControlMath.hpp"
+#include <systemlib/mavlink_log.h>
+
 
 using namespace matrix;
+
+extern orb_advert_t mavlink_log_pub;
 
 PositionControl::PositionControl()
 {
@@ -73,6 +78,9 @@ PositionControl::PositionControl()
 
 	/* Set parameter the very first time. */
 	_setParams();
+	
+	//set up debug messages:
+	mavlink_and_console_log_info(&mavlink_log_pub, "MBZIRC: initialised position controller");
 };
 
 void PositionControl::updateState(const vehicle_local_position_s &state, const Vector3f &vel_dot)
@@ -174,15 +182,9 @@ void PositionControl::_interfaceMapping()
 
 void PositionControl::_positionController()
 {
-	/* Generate desired velocity setpoint */
-	Iterm = Iterm + (_pos_sp - _pos).emult(Ip);
-	for(int i = 0; i < 3; i++)
-	{
-		Iterm(i) = math::constrain(Iterm(i), -IpMax(i), IpMax(i));
-	}
 
 	/* P-controller */
-	_vel_sp = _vel_sp + (_pos_sp - _pos).emult(Pp) + Iterm;
+	_vel_sp = _vel_sp + (_pos_sp - _pos).emult(Pp);
 
 	/* Make sure velocity setpoint is constrained in all directions (xyz). */
 	float vel_norm_xy = sqrtf(_vel_sp(0) * _vel_sp(0) + _vel_sp(1) * _vel_sp(1));
@@ -194,6 +196,7 @@ void PositionControl::_positionController()
 
 	/* Saturate velocity in D-direction */
 	_vel_sp(2) = math::constrain(_vel_sp(2), -_VelMaxZ.up, _VelMaxZ.down);
+
 }
 
 void PositionControl::_velocityController(const float &dt)

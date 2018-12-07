@@ -13,3 +13,8 @@ float32 acc_x		# in meters/(sec*sec)
 float32 acc_y		# in meters/(sec*sec)
 float32 acc_z		# in meters/(sec*sec)
 float32[3] thrust	# normalized thrust vector in NED
+
+float32 i_x # arbitrary units
+float32 i_y # arbitrary units
+float32 i_z # arbitrary units
+float32 code_pos

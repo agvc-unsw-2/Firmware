@@ -113,6 +113,8 @@ public:
 					  const matrix::Vector3f &line_a, const matrix::Vector3f &line_b, matrix::Vector3f &res);
 
 private:
+	//mbzirc debugging variables
+	int code_pos;
 
 	/** Time in us that direction change condition has to be true for direction change state */
 	static constexpr uint64_t DIRECTION_CHANGE_TRIGGER_TIME_US = 100000;
@@ -203,6 +205,8 @@ private:
 		(ParamFloat<px4::params::MPC_THR_MAX>) _thr_max,
 		(ParamFloat<px4::params::MPC_THR_HOVER>) _thr_hover,
 		(ParamFloat<px4::params::MPC_Z_P>) _z_p,
+		(ParamFloat<px4::params::MPC_Z_I>) _z_i,
+		(ParamFloat<px4::params::MPC_Z_I_MAX>) _z_i_max,
 		(ParamFloat<px4::params::MPC_Z_VEL_P>) _z_vel_p,
 		(ParamFloat<px4::params::MPC_Z_VEL_I>) _z_vel_i,
 		(ParamFloat<px4::params::MPC_Z_VEL_D>) _z_vel_d,
@@ -211,6 +215,8 @@ private:
 		(ParamFloat<px4::params::MPC_LAND_ALT1>) _slow_land_alt1,
 		(ParamFloat<px4::params::MPC_LAND_ALT2>) _slow_land_alt2,
 		(ParamFloat<px4::params::MPC_XY_P>) _xy_p,
+		(ParamFloat<px4::params::MPC_XY_I>) _xy_i,
+		(ParamFloat<px4::params::MPC_XY_I_MAX>) _xy_i_max,
 		(ParamFloat<px4::params::MPC_XY_VEL_P>) _xy_vel_p,
 		(ParamFloat<px4::params::MPC_XY_VEL_I>) _xy_vel_i,
 		(ParamFloat<px4::params::MPC_XY_VEL_D>) _xy_vel_d,
@@ -259,6 +265,9 @@ private:
 	_user_intention_z; /**< defines what the user intends to do derived from the stick input in z direciton */
 
 	matrix::Vector3f _pos_p;
+	matrix::Vector3f _pos_i;
+	matrix::Vector3f _pos_i_max;
+	
 	matrix::Vector3f _vel_p;
 	matrix::Vector3f _vel_i;
 	matrix::Vector3f _vel_d;
@@ -276,6 +285,7 @@ private:
 
 	matrix::Vector3f _thrust_int;
 	matrix::Vector3f _pos;
+	matrix::Vector3f _pos_i_curr;
 	matrix::Vector3f _pos_sp;
 	matrix::Vector3f _vel;
 	matrix::Vector3f _vel_sp;
@@ -570,6 +580,14 @@ MulticopterPositionControl::parameters_update(bool force)
 		_pos_p(0) = _xy_p.get();
 		_pos_p(1) = _xy_p.get();
 		_pos_p(2) = _z_p.get();
+
+		_pos_i(0) = _xy_i.get();
+		_pos_i(1) = _xy_i.get();
+		_pos_i(2) = _z_i.get();
+
+		_pos_i_max(0) = _xy_i_max.get();
+		_pos_i_max(1) = _xy_i_max.get();
+		_pos_i_max(2) = _z_i_max.get();
 
 		_vel_p(0) = _xy_vel_p.get();
 		_vel_p(1) = _xy_vel_p.get();
@@ -1479,8 +1497,10 @@ void
 MulticopterPositionControl::control_offboard()
 {
 	if (_pos_sp_triplet.current.valid) {
+		code_pos = 1484;
 
 		if (_control_mode.flag_control_position_enabled && _pos_sp_triplet.current.position_valid) {
+			code_pos = 1487;
 			/* control position */
 			_pos_sp(0) = _pos_sp_triplet.current.x;
 			_pos_sp(1) = _pos_sp_triplet.current.y;
@@ -1667,6 +1687,7 @@ MulticopterPositionControl::cross_sphere_line(const matrix::Vector3f &sphere_c, 
 
 void MulticopterPositionControl::control_auto()
 {
+	code_pos = 1690;
 	/* reset position setpoint on AUTO mode activation or if we are not in MC mode */
 	if (!_mode_auto || !_vehicle_status.is_rotary_wing) {
 		if (!_mode_auto) {
@@ -2163,7 +2184,7 @@ void MulticopterPositionControl::control_auto()
 			if (vel_xy_mag > SIGMA_NORM) {
 				_vel_sp(0) = _vel(0) / vel_xy_mag * get_cruising_speed_xy();
 				_vel_sp(1) = _vel(1) / vel_xy_mag * get_cruising_speed_xy();
-
+				code_pos = 2187;
 			} else {
 				/* TODO: we should go in the direction we are heading
 				 * if current velocity is zero
@@ -2360,11 +2381,24 @@ MulticopterPositionControl::calculate_velocity_setpoint()
 {
 	/* run position & altitude controllers, if enabled (otherwise use already computed velocity setpoints) */
 	if (_run_pos_control) {
+		code_pos = 2367;
 
 		// If for any reason, we get a NaN position setpoint, we better just stay where we are.
 		if (PX4_ISFINITE(_pos_sp(0)) && PX4_ISFINITE(_pos_sp(1))) {
-			_vel_sp(0) = (_pos_sp(0) - _pos(0)) * _pos_p(0);
-			_vel_sp(1) = (_pos_sp(1) - _pos(1)) * _pos_p(1);
+			code_pos = 2371;
+			matrix::Vector3f errer = _pos_sp - _pos;
+
+			_pos_i_curr += errer.emult(_pos_i) * dt;
+			for(int i = 0; i < 2; i++)
+			{
+				_pos_i_curr(i) = math::constrain(_pos_i_curr(i), -_pos_i_max(i), _pos_i_max(i));
+			}
+
+			_vel_sp(0) = errer(0) * _pos_p(0) + _pos_i_curr(0);
+			_vel_sp(1) = errer(1) * _pos_p(1) + _pos_i_curr(1);
+
+//			_vel_sp(0) = (_pos_sp(0) - _pos(0)) * _pos_p(0);
+//			_vel_sp(1) = (_pos_sp(1) - _pos(1)) * _pos_p(1);
 
 		} else {
 			_vel_sp(0) = 0.0f;
@@ -2382,8 +2416,9 @@ MulticopterPositionControl::calculate_velocity_setpoint()
 	if (_run_alt_control) {
 		if (PX4_ISFINITE(_pos_sp(2))) {
 			_vel_sp(2) = (_pos_sp(2) - _pos(2)) * _pos_p(2);
-
+			code_pos = 2419;
 		} else {
+			code_pos = 2422;
 			_vel_sp(2) = 0.0f;
 			warn_rate_limited("Caught invalid pos_sp in z");
 		}
@@ -2934,6 +2969,22 @@ MulticopterPositionControl::task_main()
 
 	parameters_update(true);
 
+	//set up debug publishing:
+	struct debug_key_value_s dbg_pos;
+	strcpy(dbg_pos.key, "code_pos");
+	dbg_pos.value = code_pos;
+	orb_advert_t pub_dbg_pos = orb_advertise(ORB_ID(debug_key_value), &dbg_pos);
+
+	struct debug_key_value_s dbg_i_x;
+	strcpy(dbg_i_x.key, "pos_x_i");
+	dbg_i_x.value = -1;
+	orb_advert_t pub_dbg_i_x = orb_advertise(ORB_ID(debug_key_value), &dbg_i_x);
+
+	struct debug_key_value_s dbg_i_z;
+	strcpy(dbg_i_z.key, "pos_z_i");
+	dbg_i_z.value = -1;
+	orb_advert_t pub_dbg_i_z = orb_advertise(ORB_ID(debug_key_value), &dbg_i_z);
+
 	/* get an initial update for all sensor and status data */
 	poll_subscriptions();
 
@@ -2953,7 +3004,27 @@ MulticopterPositionControl::task_main()
 	fds[0].fd = _local_pos_sub;
 	fds[0].events = POLLIN;
 
+	_local_pos_sp.code_pos = 2956.0;
+
+	_pos_i_curr(0) = 0.0f;
+	_pos_i_curr(1) = 0.0f;
+	_pos_i_curr(2) = 0.0f;
+
+	code_pos = 2969;
+	orb_publish(ORB_ID(debug_key_value), pub_dbg_pos, &dbg_pos);
+
 	while (!_task_should_exit) {
+
+		dbg_pos.value = code_pos;
+		orb_publish(ORB_ID(debug_key_value), pub_dbg_pos, &dbg_pos);
+
+		dbg_i_x.value = _pos_i_curr(0);
+		orb_publish(ORB_ID(debug_key_value), pub_dbg_i_x, &dbg_i_x);
+
+		dbg_i_z.value = _pos_i_curr(0);
+		orb_publish(ORB_ID(debug_key_value), pub_dbg_i_z, &dbg_i_z);
+
+		_local_pos_sp.code_pos = 2959.0;
 		/* wait for up to 20ms for data */
 		int pret = px4_poll(&fds[0], (sizeof(fds) / sizeof(fds[0])), 20);
 
@@ -3096,7 +3167,12 @@ MulticopterPositionControl::task_main()
 			_flight_tasks.switchTask(FlightTaskIndex::None);
 		}
 
+		code_pos = 0;
+		code_pos += _test_flight_tasks.get() ? 1 : 0;
+		code_pos += _flight_tasks.isAnyTaskActive() ? 10 : 0;
+		code_pos += 7000;
 		if (_test_flight_tasks.get() && _flight_tasks.isAnyTaskActive()) {
+			code_pos = 3120;
 
 			_flight_tasks.update();
 
@@ -3132,23 +3208,28 @@ MulticopterPositionControl::task_main()
 
 			}
 
+			code_pos = 3156;
 			// We can only run the control if we're already in-air, have a takeoff setpoint,
 			// or if we're in offboard control.
 			// Otherwise, we should just bail out
 			if (_vehicle_land_detected.landed && !in_auto_takeoff() && !manual_wants_takeoff()) {
 				// Keep throttle low while still on ground.
 				set_idle_state();
+				code_pos = 3116;
 
 			} else if (_vehicle_status.nav_state == _vehicle_status.NAVIGATION_STATE_MANUAL ||
 				   _vehicle_status.nav_state == _vehicle_status.NAVIGATION_STATE_POSCTL ||
 				   _vehicle_status.nav_state == _vehicle_status.NAVIGATION_STATE_ALTCTL) {
 
+				 code_pos = 3172;
 
 				_control.updateState(_local_pos, matrix::Vector3f(&(_vel_err_d(0))));
 				_control.updateSetpoint(setpoint);
 				_control.updateConstraints(constraints);
+
 				_control.generateThrustYawSetpoint(_dt);
 
+				//dbg_code_pos.value = 3175;
 				/* fill local position, velocity and thrust setpoint */
 				_local_pos_sp.timestamp = hrt_absolute_time();
 				_local_pos_sp.x = _control.getPosSp()(0);
@@ -3192,13 +3273,8 @@ MulticopterPositionControl::task_main()
 				_local_pos_sp.vy = _vel_sp(1);
 				_local_pos_sp.vz = _vel_sp(2);
 
-				/* publish local position setpoint */
-				if (_local_pos_sp_pub != nullptr) {
-					orb_publish(ORB_ID(vehicle_local_position_setpoint), _local_pos_sp_pub, &_local_pos_sp);
-
-				} else {
-					_local_pos_sp_pub = orb_advertise(ORB_ID(vehicle_local_position_setpoint), &_local_pos_sp);
-				}
+				publish_local_pos_sp();
+				 //code_pos = 3230;
 
 			} else {
 				/* position controller disabled, reset setpoints */
@@ -3211,6 +3287,8 @@ MulticopterPositionControl::task_main()
 
 				/* store last velocity in case a mode switch to position control occurs */
 				_vel_sp_prev = _vel;
+
+				 code_pos = 3244;
 			}
 
 			/* generate attitude setpoint from manual controls */
@@ -3299,13 +3377,13 @@ MulticopterPositionControl::publish_local_pos_sp()
 
 	/* publish local position setpoint */
 	if (_local_pos_sp_pub != nullptr) {
+
 		orb_publish(ORB_ID(vehicle_local_position_setpoint),
 			    _local_pos_sp_pub, &_local_pos_sp);
-
 	} else {
 		_local_pos_sp_pub = orb_advertise(
-					    ORB_ID(vehicle_local_position_setpoint),
-					    &_local_pos_sp);
+				ORB_ID(vehicle_local_position_setpoint),
+				&_local_pos_sp);
 	}
 }
 
