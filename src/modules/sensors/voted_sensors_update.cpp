@@ -40,6 +40,7 @@
 #include "voted_sensors_update.h"
 
 #include <systemlib/mavlink_log.h>
+#include <mathlib/math/filter/Butter2.hpp>
 
 #include <conversion/rotation.h>
 #include <ecl/geo/geo.h>
