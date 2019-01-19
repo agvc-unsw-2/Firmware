@@ -2388,7 +2388,7 @@ MulticopterPositionControl::calculate_velocity_setpoint()
 			code_pos = 2371;
 			matrix::Vector3f errer = _pos_sp - _pos;
 
-			_pos_i_curr += errer.emult(_pos_i) * dt;
+			_pos_i_curr += errer.emult(_pos_i) * _dt;
 			for(int i = 0; i < 2; i++)
 			{
 				_pos_i_curr(i) = math::constrain(_pos_i_curr(i), -_pos_i_max(i), _pos_i_max(i));
