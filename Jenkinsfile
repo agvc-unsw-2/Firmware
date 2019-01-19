@@ -18,51 +18,51 @@ pipeline {
 
           // fmu-v2_{default, lpe} and fmu-v3_{default, rtps}
           // bloaty compare to last successful master build
-          builds["px4fmu-v2"] = {
-            node {
-              stage("Build Test px4fmu-v2") {
-                docker.image(docker_nuttx).inside('-e CCACHE_BASEDIR=$WORKSPACE -v ${CCACHE_DIR}:${CCACHE_DIR}:rw') {
-                  stage("px4fmu-v2") {
-                    checkout scm
-                    sh "export"
-                    sh "make distclean"
-                    sh "ccache -z"
-                    sh "git fetch --tags"
-                    sh "make nuttx_px4io-v2_default"
-                    sh "make nuttx_px4io-v2_default bloaty_symbols"
-                    sh "make nuttx_px4io-v2_default bloaty_compileunits"
-                    sh "make nuttx_px4io-v2_default bloaty_compare_master"
-                    sh "make nuttx_px4fmu-v2_default"
-                    sh "make nuttx_px4fmu-v2_default bloaty_symbols"
-                    sh "make nuttx_px4fmu-v2_default bloaty_compileunits"
-                    sh "make nuttx_px4fmu-v2_default bloaty_inlines"
-                    sh "make nuttx_px4fmu-v2_default bloaty_templates"
-                    sh "make nuttx_px4fmu-v2_default bloaty_compare_master"
-                    sh "make nuttx_px4fmu-v2_lpe"
-                    sh "make nuttx_px4fmu-v2_test"
-                    sh "make nuttx_px4fmu-v3_default"
-                    sh "make nuttx_px4fmu-v3_rtps"
-                    sh "make sizes"
-                    sh "ccache -s"
-                    archiveArtifacts(allowEmptyArchive: false, artifacts: 'build/**/*.px4, build/**/*.elf', fingerprint: true, onlyIfSuccessful: true)
-                    sh "make distclean"
-                  }
-                }
-              }
-            }
-          }
+          // builds["px4fmu-v2"] = {
+          //   node {
+          //     stage("Build Test px4fmu-v2") {
+          //       docker.image(docker_nuttx).inside('-e CCACHE_BASEDIR=$WORKSPACE -v ${CCACHE_DIR}:${CCACHE_DIR}:rw') {
+          //         stage("px4fmu-v2") {
+          //           checkout scm
+          //           sh "export"
+          //           sh "make distclean"
+          //           sh "ccache -z"
+          //           sh "git fetch --tags"
+          //           sh "make nuttx_px4io-v2_default"
+          //           sh "make nuttx_px4io-v2_default bloaty_symbols"
+          //           sh "make nuttx_px4io-v2_default bloaty_compileunits"
+          //           sh "make nuttx_px4io-v2_default bloaty_compare_master"
+          //           sh "make nuttx_px4fmu-v2_default"
+          //           sh "make nuttx_px4fmu-v2_default bloaty_symbols"
+          //           sh "make nuttx_px4fmu-v2_default bloaty_compileunits"
+          //           sh "make nuttx_px4fmu-v2_default bloaty_inlines"
+          //           sh "make nuttx_px4fmu-v2_default bloaty_templates"
+          //           sh "make nuttx_px4fmu-v2_default bloaty_compare_master"
+          //           sh "make nuttx_px4fmu-v2_lpe"
+          //           sh "make nuttx_px4fmu-v2_test"
+          //           sh "make nuttx_px4fmu-v3_default"
+          //           sh "make nuttx_px4fmu-v3_rtps"
+          //           sh "make sizes"
+          //           sh "ccache -s"
+          //           archiveArtifacts(allowEmptyArchive: false, artifacts: 'build/**/*.px4, build/**/*.elf', fingerprint: true, onlyIfSuccessful: true)
+          //           sh "make distclean"
+          //         }
+          //       }
+          //     }
+          //   }
+          // }
 
           // nuttx default targets that are archived and uploaded to s3
-          for (def option in ["px4fmu-v4", "px4fmu-v4pro", "px4fmu-v5", "aerofc-v1", "aerocore2", "auav-x21", "crazyflie", "mindpx-v2", "nxphlite-v3", "tap-v1", "omnibus-f4sd"]) {
+          for (def option in ["px4fmu-v4", "px4fmu-v4pro", "px4fmu-v5", "aerofc-v1"]) {
             def node_name = "${option}"
             builds[node_name] = createBuildNodeArchive(docker_nuttx, "${node_name}_default")
           }
 
           // other nuttx default targets
-          for (def option in ["px4-same70xplained-v1", "px4-stm32f4discovery", "px4cannode-v1", "px4esc-v1", "px4nucleoF767ZI-v1", "s2740vc-v1"]) {
-            def node_name = "${option}"
-            builds[node_name] = createBuildNode(docker_nuttx, "${node_name}_default")
-          }
+          // for (def option in ["px4-same70xplained-v1", "px4-stm32f4discovery", "px4cannode-v1", "px4esc-v1", "px4nucleoF767ZI-v1", "s2740vc-v1"]) {
+          //   def node_name = "${option}"
+          //   builds[node_name] = createBuildNode(docker_nuttx, "${node_name}_default")
+          // }
 
           builds["sitl_rtps"] = createBuildNode(docker_base, 'posix_sitl_rtps')
           builds["sitl (GCC 7)"] = createBuildNode(docker_arch, 'posix_sitl_default')
@@ -73,8 +73,8 @@ pipeline {
           builds["ocpoc"] = createBuildNode(docker_armhf, 'posix_ocpoc_ubuntu')
 
           // snapdragon (eagle_default)
-          builds["eagle (linux)"] = createBuildNodeDockerLogin(docker_snapdragon, 'docker_hub_dagar', 'posix_eagle_default')
-          builds["eagle (qurt)"] = createBuildNodeDockerLogin(docker_snapdragon, 'docker_hub_dagar', 'qurt_eagle_default')
+          // builds["eagle (linux)"] = createBuildNodeDockerLogin(docker_snapdragon, 'docker_hub_dagar', 'posix_eagle_default')
+          // builds["eagle (qurt)"] = createBuildNodeDockerLogin(docker_snapdragon, 'docker_hub_dagar', 'qurt_eagle_default')
 
           // posix_sitl_default with package
           builds["sitl"] = {
