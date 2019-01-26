@@ -140,15 +140,15 @@ pipeline {
     stage('Test') {
       parallel {
 
-        stage('Style Check') {
-          agent {
-            docker { image 'px4io/px4-dev-base:2018-03-30' }
-          }
+        // stage('Style Check') {
+        //   agent {
+        //     docker { image 'px4io/px4-dev-base:2018-03-30' }
+        //   }
 
-          steps {
-            sh 'make check_format'
-          }
-        }
+        //   steps {
+        //     sh 'make check_format'
+        //   }
+        // }
 
         stage('clang analyzer') {
           agent {
@@ -182,52 +182,52 @@ pipeline {
           }
         }
 
-        stage('clang tidy') {
-          agent {
-            docker {
-              image 'px4io/px4-dev-clang:2018-03-30'
-              args '-e CCACHE_BASEDIR=$WORKSPACE -v ${CCACHE_DIR}:${CCACHE_DIR}:rw'
-            }
-          }
-          steps {
-            sh 'export'
-            sh 'make distclean'
-            sh 'make clang-tidy-quiet'
-            sh 'make distclean'
-          }
-        }
+        // stage('clang tidy') {
+        //   agent {
+        //     docker {
+        //       image 'px4io/px4-dev-clang:2018-03-30'
+        //       args '-e CCACHE_BASEDIR=$WORKSPACE -v ${CCACHE_DIR}:${CCACHE_DIR}:rw'
+        //     }
+        //   }
+        //   steps {
+        //     sh 'export'
+        //     sh 'make distclean'
+        //     sh 'make clang-tidy-quiet'
+        //     sh 'make distclean'
+        //   }
+        // }
 
-        stage('cppcheck') {
-          agent {
-            docker {
-              image 'px4io/px4-dev-base:ubuntu17.10'
-              args '-e CCACHE_BASEDIR=$WORKSPACE -v ${CCACHE_DIR}:${CCACHE_DIR}:rw'
-            }
-          }
-          steps {
-            sh 'export'
-            sh 'make distclean'
-            sh 'make cppcheck'
-            // publish html
-            publishHTML target: [
-              reportTitles: 'Cppcheck',
-              allowMissing: false,
-              alwaysLinkToLastBuild: true,
-              keepAll: true,
-              reportDir: 'build/cppcheck/',
-              reportFiles: '*',
-              reportName: 'Cppcheck'
-            ]
-            sh 'make distclean'
-          }
-          when {
-            anyOf {
-              branch 'master'
-              branch 'beta'
-              branch 'stable'
-            }
-          }
-        }
+        // stage('cppcheck') {
+        //   agent {
+        //     docker {
+        //       image 'px4io/px4-dev-base:ubuntu17.10'
+        //       args '-e CCACHE_BASEDIR=$WORKSPACE -v ${CCACHE_DIR}:${CCACHE_DIR}:rw'
+        //     }
+        //   }
+        //   steps {
+        //     sh 'export'
+        //     sh 'make distclean'
+        //     sh 'make cppcheck'
+        //     // publish html
+        //     publishHTML target: [
+        //       reportTitles: 'Cppcheck',
+        //       allowMissing: false,
+        //       alwaysLinkToLastBuild: true,
+        //       keepAll: true,
+        //       reportDir: 'build/cppcheck/',
+        //       reportFiles: '*',
+        //       reportName: 'Cppcheck'
+        //     ]
+        //     sh 'make distclean'
+        //   }
+        //   when {
+        //     anyOf {
+        //       branch 'master'
+        //       branch 'beta'
+        //       branch 'stable'
+        //     }
+        //   }
+        // }
 
         stage('tests') {
           agent {
