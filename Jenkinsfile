@@ -18,39 +18,40 @@ pipeline {
 
           // fmu-v2_{default, lpe} and fmu-v3_{default, rtps}
           // bloaty compare to last successful master build
-          builds["px4fmu-v2"] = {
-            node {
-              stage("Build Test px4fmu-v2") {
-                docker.image(docker_nuttx).inside('-e CCACHE_BASEDIR=$WORKSPACE -v ${CCACHE_DIR}:${CCACHE_DIR}:rw') {
-                  stage("px4fmu-v2") {
-                    checkout scm
-                    sh "export"
-                    sh "make distclean"
-                    sh "ccache -z"
-                    sh "git fetch --tags"
-                    sh "make nuttx_px4io-v2_default"
-                    sh "make nuttx_px4io-v2_default bloaty_symbols"
-                    sh "make nuttx_px4io-v2_default bloaty_compileunits"
-                    sh "make nuttx_px4io-v2_default bloaty_compare_master"
-                    sh "make nuttx_px4fmu-v2_default"
-                    sh "make nuttx_px4fmu-v2_default bloaty_symbols"
-                    sh "make nuttx_px4fmu-v2_default bloaty_compileunits"
-                    sh "make nuttx_px4fmu-v2_default bloaty_inlines"
-                    sh "make nuttx_px4fmu-v2_default bloaty_templates"
-                    sh "make nuttx_px4fmu-v2_default bloaty_compare_master"
-                    sh "make nuttx_px4fmu-v2_lpe"
-                    sh "make nuttx_px4fmu-v2_test"
-                    sh "make nuttx_px4fmu-v3_default"
-                    sh "make nuttx_px4fmu-v3_rtps"
-                    sh "make sizes"
-                    sh "ccache -s"
-                    archiveArtifacts(allowEmptyArchive: false, artifacts: 'build/**/*.px4, build/**/*.elf', fingerprint: true, onlyIfSuccessful: true)
-                    sh "make distclean"
-                  }
-                }
-              }
-            }
-          }
+          
+          // builds["px4fmu-v2"] = {
+          //   node {
+          //     stage("Build Test px4fmu-v2") {
+          //       docker.image(docker_nuttx).inside('-e CCACHE_BASEDIR=$WORKSPACE -v ${CCACHE_DIR}:${CCACHE_DIR}:rw') {
+          //         stage("px4fmu-v2") {
+          //           checkout scm
+          //           sh "export"
+          //           sh "make distclean"
+          //           sh "ccache -z"
+          //           sh "git fetch --tags"
+          //           sh "make nuttx_px4io-v2_default"
+          //           sh "make nuttx_px4io-v2_default bloaty_symbols"
+          //           sh "make nuttx_px4io-v2_default bloaty_compileunits"
+          //           sh "make nuttx_px4io-v2_default bloaty_compare_master"
+          //           sh "make nuttx_px4fmu-v2_default"
+          //           sh "make nuttx_px4fmu-v2_default bloaty_symbols"
+          //           sh "make nuttx_px4fmu-v2_default bloaty_compileunits"
+          //           sh "make nuttx_px4fmu-v2_default bloaty_inlines"
+          //           sh "make nuttx_px4fmu-v2_default bloaty_templates"
+          //           sh "make nuttx_px4fmu-v2_default bloaty_compare_master"
+          //           sh "make nuttx_px4fmu-v2_lpe"
+          //           sh "make nuttx_px4fmu-v2_test"
+          //           sh "make nuttx_px4fmu-v3_default"
+          //           sh "make nuttx_px4fmu-v3_rtps"
+          //           sh "make sizes"
+          //           sh "ccache -s"
+          //           archiveArtifacts(allowEmptyArchive: false, artifacts: 'build/**/*.px4, build/**/*.elf', fingerprint: true, onlyIfSuccessful: true)
+          //           sh "make distclean"
+          //         }
+          //       }
+          //     }
+          //   }
+          // }
 
           // nuttx default targets that are archived and uploaded to s3
           for (def option in ["px4fmu-v4", "px4fmu-v4pro", "px4fmu-v5", "aerofc-v1", "aerocore2", "auav-x21", "crazyflie", "mindpx-v2", "nxphlite-v3", "tap-v1", "omnibus-f4sd"]) {
@@ -59,10 +60,10 @@ pipeline {
           }
 
           // other nuttx default targets
-          for (def option in ["px4-same70xplained-v1", "px4-stm32f4discovery", "px4cannode-v1", "px4esc-v1", "px4nucleoF767ZI-v1", "s2740vc-v1"]) {
-            def node_name = "${option}"
-            builds[node_name] = createBuildNode(docker_nuttx, "${node_name}_default")
-          }
+          // for (def option in ["px4-same70xplained-v1", "px4-stm32f4discovery", "px4cannode-v1", "px4esc-v1", "px4nucleoF767ZI-v1", "s2740vc-v1"]) {
+          //   def node_name = "${option}"
+          //   builds[node_name] = createBuildNode(docker_nuttx, "${node_name}_default")
+          // }
 
           builds["sitl_rtps"] = createBuildNode(docker_base, 'posix_sitl_rtps')
           builds["sitl (GCC 7)"] = createBuildNode(docker_arch, 'posix_sitl_default')
@@ -72,9 +73,9 @@ pipeline {
 
           builds["ocpoc"] = createBuildNode(docker_armhf, 'posix_ocpoc_ubuntu')
 
-          // snapdragon (eagle_default)
-          builds["eagle (linux)"] = createBuildNodeDockerLogin(docker_snapdragon, 'docker_hub_dagar', 'posix_eagle_default')
-          builds["eagle (qurt)"] = createBuildNodeDockerLogin(docker_snapdragon, 'docker_hub_dagar', 'qurt_eagle_default')
+          // // snapdragon (eagle_default)
+          // builds["eagle (linux)"] = createBuildNodeDockerLogin(docker_snapdragon, 'docker_hub_dagar', 'posix_eagle_default')
+          // builds["eagle (qurt)"] = createBuildNodeDockerLogin(docker_snapdragon, 'docker_hub_dagar', 'qurt_eagle_default')
 
           // posix_sitl_default with package
           builds["sitl"] = {
@@ -98,39 +99,39 @@ pipeline {
             }
           }
 
-          // MAC OS posix_sitl_default
-          builds["sitl (OSX)"] = {
-            node("mac") {
-              withEnv(["CCACHE_BASEDIR=${pwd()}"]) {
-                stage("sitl (OSX)") {
-                  checkout scm
-                  sh "export"
-                  sh "make distclean"
-                  sh "ccache -z"
-                  sh "make posix_sitl_default"
-                  sh "ccache -s"
-                  sh "make distclean"
-                }
-              }
-            }
-          }
+          // // MAC OS posix_sitl_default
+          // builds["sitl (OSX)"] = {
+          //   node("mac") {
+          //     withEnv(["CCACHE_BASEDIR=${pwd()}"]) {
+          //       stage("sitl (OSX)") {
+          //         checkout scm
+          //         sh "export"
+          //         sh "make distclean"
+          //         sh "ccache -z"
+          //         sh "make posix_sitl_default"
+          //         sh "ccache -s"
+          //         sh "make distclean"
+          //       }
+          //     }
+          //   }
+          // }
 
-          // MAC OS nuttx_px4fmu-v4pro_default
-          builds["px4fmu-v4pro (OSX)"] = {
-            node("mac") {
-              withEnv(["CCACHE_BASEDIR=${pwd()}"]) {
-                stage("px4fmu-v4pro (OSX)") {
-                  checkout scm
-                  sh "export"
-                  sh "make distclean"
-                  sh "ccache -z"
-                  sh "make nuttx_px4fmu-v4pro_default"
-                  sh "ccache -s"
-                  sh "make distclean"
-                }
-              }
-            }
-          }
+          // // MAC OS nuttx_px4fmu-v4pro_default
+          // builds["px4fmu-v4pro (OSX)"] = {
+          //   node("mac") {
+          //     withEnv(["CCACHE_BASEDIR=${pwd()}"]) {
+          //       stage("px4fmu-v4pro (OSX)") {
+          //         checkout scm
+          //         sh "export"
+          //         sh "make distclean"
+          //         sh "ccache -z"
+          //         sh "make nuttx_px4fmu-v4pro_default"
+          //         sh "ccache -s"
+          //         sh "make distclean"
+          //       }
+          //     }
+          //   }
+          // }
 
           parallel builds
         } // script
@@ -140,15 +141,15 @@ pipeline {
     stage('Test') {
       parallel {
 
-        stage('Style Check') {
-          agent {
-            docker { image 'px4io/px4-dev-base:2018-03-30' }
-          }
+        // stage('Style Check') {
+        //   agent {
+        //     docker { image 'px4io/px4-dev-base:2018-03-30' }
+        //   }
 
-          steps {
-            sh 'make check_format'
-          }
-        }
+        //   steps {
+        //     sh 'make check_format'
+        //   }
+        // }
 
         stage('clang analyzer') {
           agent {
@@ -182,52 +183,52 @@ pipeline {
           }
         }
 
-        stage('clang tidy') {
-          agent {
-            docker {
-              image 'px4io/px4-dev-clang:2018-03-30'
-              args '-e CCACHE_BASEDIR=$WORKSPACE -v ${CCACHE_DIR}:${CCACHE_DIR}:rw'
-            }
-          }
-          steps {
-            sh 'export'
-            sh 'make distclean'
-            sh 'make clang-tidy-quiet'
-            sh 'make distclean'
-          }
-        }
+        // stage('clang tidy') {
+        //   agent {
+        //     docker {
+        //       image 'px4io/px4-dev-clang:2018-03-30'
+        //       args '-e CCACHE_BASEDIR=$WORKSPACE -v ${CCACHE_DIR}:${CCACHE_DIR}:rw'
+        //     }
+        //   }
+        //   steps {
+        //     sh 'export'
+        //     sh 'make distclean'
+        //     sh 'make clang-tidy-quiet'
+        //     sh 'make distclean'
+        //   }
+        // }
 
-        stage('cppcheck') {
-          agent {
-            docker {
-              image 'px4io/px4-dev-base:ubuntu17.10'
-              args '-e CCACHE_BASEDIR=$WORKSPACE -v ${CCACHE_DIR}:${CCACHE_DIR}:rw'
-            }
-          }
-          steps {
-            sh 'export'
-            sh 'make distclean'
-            sh 'make cppcheck'
-            // publish html
-            publishHTML target: [
-              reportTitles: 'Cppcheck',
-              allowMissing: false,
-              alwaysLinkToLastBuild: true,
-              keepAll: true,
-              reportDir: 'build/cppcheck/',
-              reportFiles: '*',
-              reportName: 'Cppcheck'
-            ]
-            sh 'make distclean'
-          }
-          when {
-            anyOf {
-              branch 'master'
-              branch 'beta'
-              branch 'stable'
-            }
-          }
-        }
+        // stage('cppcheck') {
+        //   agent {
+        //     docker {
+        //       image 'px4io/px4-dev-base:ubuntu17.10'
+        //       args '-e CCACHE_BASEDIR=$WORKSPACE -v ${CCACHE_DIR}:${CCACHE_DIR}:rw'
+        //     }
+        //   }
+        //   steps {
+        //     sh 'export'
+        //     sh 'make distclean'
+        //     sh 'make cppcheck'
+        //     // publish html
+        //     publishHTML target: [
+        //       reportTitles: 'Cppcheck',
+        //       allowMissing: false,
+        //       alwaysLinkToLastBuild: true,
+        //       keepAll: true,
+        //       reportDir: 'build/cppcheck/',
+        //       reportFiles: '*',
+        //       reportName: 'Cppcheck'
+        //     ]
+        //     sh 'make distclean'
+        //   }
+        //   when {
+        //     anyOf {
+        //       branch 'master'
+        //       branch 'beta'
+        //       branch 'stable'
+        //     }
+        //   }
+        // }
 
         stage('tests') {
           agent {
