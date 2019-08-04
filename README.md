@@ -30,6 +30,7 @@ This repository holds the [PX4](http://px4.io) flight control solution for drone
 * In offboard mode desired yaw is ignored allowing the sending of roll, pitch yawrate commands.
 
 ### Safety
+* Arming and disarming can be performed from the remote while in offboard mode
 * The kill switch also disarms the system
 * Arming also controls the aux ports
 
