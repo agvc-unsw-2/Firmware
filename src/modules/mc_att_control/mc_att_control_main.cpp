@@ -705,8 +705,10 @@ MulticopterAttitudeControl::run()
 						const auto yawrate_reference = _v_rates_sp.yaw;
 						_rates_sp(2) = yawrate_reference;
 					}
-
-					publish_rates_setpoint();
+					// Add extra failsafe against re-publishing rates setpoint
+					if (!_v_control_mode.flag_control_offboard_enabled) {
+						publish_rates_setpoint();
+					}
 				}
 
 			} else {
@@ -721,7 +723,10 @@ MulticopterAttitudeControl::run()
 							math::superexpo(_manual_control_sp.r, _param_mc_acro_expo_y.get(), _param_mc_acro_supexpoy.get()));
 						_rates_sp = man_rate_sp.emult(_acro_rate_max);
 						_thrust_sp = _manual_control_sp.z;
-						publish_rates_setpoint();
+						// Add extra failsafe against re-publishing rates setpoint
+						if (!_v_control_mode.flag_control_offboard_enabled) {
+							publish_rates_setpoint();
+						}
 					}
 
 				} else {

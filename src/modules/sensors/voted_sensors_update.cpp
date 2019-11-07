@@ -605,9 +605,16 @@ void VotedSensorsUpdate::accel_poll(struct sensor_combined_s &raw)
   			static math::Butter2 accel_butter_y;
   			static math::Butter2 accel_butter_z;
 
-			_last_sensor_data[uorb_index].accelerometer_m_s2[0] = accel_butter_x.apply(accel_data(0));
-			_last_sensor_data[uorb_index].accelerometer_m_s2[1] = accel_butter_y.apply(accel_data(1));
-			_last_sensor_data[uorb_index].accelerometer_m_s2[2] = accel_butter_z.apply(accel_data(2));
+			bool enable_butter_filter = true;
+			if(enable_butter_filter) {
+				_last_sensor_data[uorb_index].accelerometer_m_s2[0] = accel_butter_x.apply(accel_data(0));
+				_last_sensor_data[uorb_index].accelerometer_m_s2[1] = accel_butter_y.apply(accel_data(1));
+				_last_sensor_data[uorb_index].accelerometer_m_s2[2] = accel_butter_z.apply(accel_data(2));
+			} else {
+				_last_sensor_data[uorb_index].accelerometer_m_s2[0] = accel_data(0);
+				_last_sensor_data[uorb_index].accelerometer_m_s2[1] = accel_data(1);
+				_last_sensor_data[uorb_index].accelerometer_m_s2[2] = accel_data(2);
+			}
 
 			_last_accel_timestamp[uorb_index] = accel_report.timestamp;
 			_accel.voter.put(uorb_index, accel_report.timestamp, _last_sensor_data[uorb_index].accelerometer_m_s2,
