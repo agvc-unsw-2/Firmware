@@ -530,7 +530,26 @@ MulticopterAttitudeControl::control_attitude()
 	// physical thrust axis is the negative of body z axis
 	_thrust_sp = -_v_att_sp.thrust_body[2];
 
-	_rates_sp = _attitude_control.update(Quatf(_v_att.q), Quatf(_v_att_sp.q_d), _v_att_sp.yaw_sp_move_rate);
+	// HACKING FROM HERE ON
+	Quatf q(_v_att.q);
+	Quatf qd(_v_att_sp.q_d);
+
+	if (_v_control_mode.flag_control_offboard_enabled) {
+	  Eulerf current_euler(q);
+	  Eulerf desired_euler(qd);
+	  qd = Quatf(Eulerf(desired_euler.phi(), desired_euler.theta(), current_euler.psi()));
+	}
+	// HACKING TILL HERE
+
+	_rates_sp = _attitude_control.update(q, qd, _v_att_sp.yaw_sp_move_rate);
+
+	// ugly hack to get yaw rate
+    	if (_v_control_mode.flag_control_offboard_enabled) {
+		//_v_rates_sp_sub.update(&_v_rates_sp); // for 1.9.2 dev
+		vehicle_rates_setpoint_poll();
+		_rates_sp(2) = _v_rates_sp.yaw;
+    	}
+	// ugly hack end
 }
 
 /*
@@ -846,7 +865,10 @@ MulticopterAttitudeControl::run()
 					}
 
 					control_attitude();
-					publish_rates_setpoint();
+					// Add extra failsafe against re-publishing rates setpoint
+					if (!_v_control_mode.flag_control_offboard_enabled) {
+						publish_rates_setpoint();
+					}
 				}
 
 			} else {
@@ -860,7 +882,9 @@ MulticopterAttitudeControl::run()
 								math::superexpo(_manual_control_sp.r, _param_mc_acro_expo_y.get(), _param_mc_acro_supexpoy.get()));
 						_rates_sp = man_rate_sp.emult(_acro_rate_max);
 						_thrust_sp = _manual_control_sp.z;
-						publish_rates_setpoint();
+						if (!_v_control_mode.flag_control_offboard_enabled) {
+							publish_rates_setpoint();
+						}
 					}
 
 				} else {

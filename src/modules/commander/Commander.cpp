@@ -1993,7 +1993,7 @@ Commander::run()
 
 			/* DISARM
 			 * check if left stick is in lower left position or arm button is pushed or arm switch has transition from arm to disarm
-			 * and we are in MANUAL, Rattitude, or AUTO_READY mode or (ASSIST mode and landed)
+			 * and we are in MANUAL, OFFBOARD, Rattitude, or AUTO_READY mode or (ASSIST mode and landed)
 			 * do it only for rotary wings in manual mode or fixed wing if landed.
 			 * Disable stick-disarming if arming switch or button is mapped */
 			const bool stick_in_lower_left = sp_man.r < -STICK_ON_OFF_LIMIT && sp_man.z < 0.1f
@@ -2011,6 +2011,7 @@ Commander::run()
 				    internal_state.main_state != commander_state_s::MAIN_STATE_ACRO &&
 				    internal_state.main_state != commander_state_s::MAIN_STATE_STAB &&
 				    internal_state.main_state != commander_state_s::MAIN_STATE_RATTITUDE &&
+				    internal_state.main_state != commander_state_s::MAIN_STATE_OFFBOARD &&
 				    !land_detector.landed) {
 					print_reject_arm("Not disarming! Not yet in manual mode or landed");
 
@@ -2029,7 +2030,7 @@ Commander::run()
 
 			/* ARM
 			 * check if left stick is in lower right position or arm button is pushed or arm switch has transition from disarm to arm
-			 * and we're in MANUAL mode.
+			 * and we're in MANUAL or OFFBOARD mode.
 			 * Disable stick-arming if arming switch or button is mapped */
 			const bool stick_in_lower_right = sp_man.r > STICK_ON_OFF_LIMIT && sp_man.z < 0.1f
 							  && !arm_switch_or_button_mapped;
@@ -2057,6 +2058,7 @@ Commander::run()
 					    && (internal_state.main_state != commander_state_s::MAIN_STATE_ALTCTL)
 					    && (internal_state.main_state != commander_state_s::MAIN_STATE_POSCTL)
 					    && (internal_state.main_state != commander_state_s::MAIN_STATE_RATTITUDE)
+					    && (internal_state.main_state != commander_state_s::MAIN_STATE_OFFBOARD)
 					   ) {
 						print_reject_arm("Not arming: Switch to a manual mode first");
 
@@ -2120,6 +2122,7 @@ Commander::run()
 					mavlink_log_emergency(&mavlink_log_pub, "Manual kill-switch engaged");
 					status_changed = true;
 					armed.manual_lockdown = true;
+					arm_disarm(false, &mavlink_log_pub, "kill switch");
 				}
 
 			} else if (sp_man.kill_switch == manual_control_setpoint_s::SWITCH_POS_OFF) {
