@@ -1227,7 +1227,7 @@ PX4FMU::cycle()
 				/* output to the servos */
 				if (_pwm_initialized && !_test_mode) {
 					for (size_t i = 0; i < mixed_num_outputs; i++) {
-						up_pwm_servo_set(i, pwm_limited[i]);
+						//up_pwm_servo_set(i, pwm_limited[i]);
 					}
 				}
 
@@ -1235,7 +1235,7 @@ PX4FMU::cycle()
 				 * the oneshots with updated values.
 				 */
 				if (n_updates > 0 && !_test_mode) {
-					up_pwm_update();
+					//up_pwm_update();
 				}
 
 				actuator_outputs_s actuator_outputs = {};

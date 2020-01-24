@@ -51,6 +51,7 @@
 #include <drivers/drv_range_finder.h>
 #include <drivers/drv_rc_input.h>
 #include <drivers/drv_tone_alarm.h>
+#include <drivers/drv_pwm_output.h>
 #include <ecl/geo/geo.h>
 
 #ifdef CONFIG_NET
@@ -401,6 +402,25 @@ MavlinkReceiver::send_storage_information(int storage_id)
 	mavlink_msg_storage_information_send_struct(_mavlink->get_channel(), &storage_info);
 }
 
+static int set_servo(int channel, int value)
+{
+    int fd = px4_open("/dev/px4fmu", 0);
+    if (fd < 0) {
+        return -1;
+    }
+
+    if (channel < 0 || channel > 5) {
+        return -2;
+    }
+
+    int ret = px4_ioctl(fd, PWM_SERVO_SET(channel), value);
+
+    px4_close(fd);
+
+    return ret;
+}
+
+
 void
 MavlinkReceiver::handle_message_command_long(mavlink_message_t *msg)
 {
@@ -499,7 +519,10 @@ void MavlinkReceiver::handle_message_command_both(mavlink_message_t *msg, const 
 		if ((int)(cmd_mavlink.param2 + 0.5f) == 1) {
 			send_storage_information(cmd_mavlink.param1 + 0.5f);
 		}
-
+    } else if (cmd_mavlink.command == MAV_CMD_DO_SET_SERVO) {
+        if (set_servo((int)cmd_mavlink.param1, (int)cmd_mavlink.param2)) {
+            result = vehicle_command_ack_s::VEHICLE_RESULT_FAILED;
+        }
 	} else {
 
 		send_ack = false;
